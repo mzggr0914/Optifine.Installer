@@ -63,7 +63,7 @@ namespace OptifineInstaller
             Debug.WriteLine($"Minecraft_OptiFine Version: {mcVerOf}");
 
             CopyMinecraftVersion(mcVer, mcVerOf, dirMcVers);
-            InstallOptiFineLibrary(mcVer, ofEd, dirMcLib);
+            InstallOptiFineLibrary(mcVer, ofEd, dirMcLib, Utils.IsOver1_17(version));
             InstallLaunchwrapperLibrary(dirMcLib);
             UpdateJson(dirMcVers, mcVerOf, mcVer, ofEd);
             JarFile = null;
@@ -130,7 +130,7 @@ namespace OptifineInstaller
             return date.ToString("yyyy-MM-dd'T'HH:mm:ssK");
         }
 
-        private static bool InstallOptiFineLibrary(string mcVer, string ofEd, DirectoryInfo dirMcLib)
+        private static bool InstallOptiFineLibrary(string mcVer, string ofEd, DirectoryInfo dirMcLib, bool isOver117)
         {
             var dirDest = new DirectoryInfo(Path.Combine(dirMcLib.FullName, $"optifine/OptiFine/{mcVer}_{ofEd}"));
             var fileDest = new FileInfo(Path.Combine(dirDest.FullName, $"OptiFine-{mcVer}_{ofEd}.jar"));
@@ -149,7 +149,7 @@ namespace OptifineInstaller
             if (!baseJar.Exists) { ShowMessageVersionNotFound(mcVer); throw new Exception("QUIET"); }
 
             dirDest.Create();
-            Patcher.Process(baseJar, JarFile, fileDest);
+            Patcher.Process(baseJar, JarFile, fileDest, isOver117);
             return true;
         }
 

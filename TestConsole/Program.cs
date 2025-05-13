@@ -39,6 +39,8 @@ await process.WaitForExitAsync();
 
 /*
  * CONFIRMED WORKING VERSIONS
+ * - OptiFine_1.21.4_HD_U_J4_pre2
+ * - OptiFine_1.17.1_HD_U_H1
  * - OptiFine_1.17.1_HD_U_G9
  * - OptiFine_1.17_HD_U_G9_pre25
  * - OptiFine_1.16.5_HD_U_G8
@@ -46,8 +48,13 @@ await process.WaitForExitAsync();
  * - OptiFine_1.14.3_HD_U_F2
  * - OptiFine_1.12.2_HD_U_G6_pre1
  * - OptiFine_1.8.9_HD_U_M6_pre2
+ * - OptiFine_1.8.9_HD_U_M5
+ * - OptiFine_1.8.9_HD_U_L5 -- Earliest verified working version
  * 
- *  NOT WORKING VERSIONS
- * - OptiFine_1.17.1_HD_U_H1       // First version that fails to launch
- * - OptiFine_1.17.1_HD_U_H2_pre1
+ * 
+ *  KNOWN NON-WORKING VERSIONS
+ * - OptiFine_1.8.9_HD_U_I7 
+ * - OptiFine_1.8.9_HD_U_H7
+ * - OptiFine_1.8.9_HD_U_H5
+ * - OptiFine_1.8.8_HD_U_I7
  */

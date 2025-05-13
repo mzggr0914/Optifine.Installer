@@ -1,4 +1,5 @@
-﻿using System;
+﻿using OptifineInstaller;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -152,5 +153,36 @@ public class Utils
         }
 
         return buf.ToString();
+    }
+
+    public static bool IsOver1_17(OptifineVersion version)
+    {
+        Version v1 = NormalizeVersion(version.MinecraftVersion);
+        Version v2 = NormalizeVersion("1.17.1");
+
+        int result = v1.CompareTo(v2);
+
+        if (result > 0)
+        {
+            return true;
+
+        }
+        else if (result == 0)
+        {
+            return version.OptifineEdition != "HD_U_G9";
+        }
+        return false;
+    }
+
+    static Version NormalizeVersion(string versionStr)
+    {
+        var parts = versionStr.Split('.');
+        while (parts.Length < 4)
+        {
+            versionStr += ".0";
+            parts = versionStr.Split('.');
+        }
+
+        return new Version(versionStr);
     }
 }

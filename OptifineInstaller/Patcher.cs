@@ -12,7 +12,7 @@ namespace OptifineInstaller
 {
     public static class Patcher
     {
-        public static void Process(FileInfo baseFile, FileInfo diffFile, FileInfo modFile)
+        public static void Process(FileInfo baseFile, FileInfo diffFile, FileInfo modFile, bool isOver1_17)
         {
             var diffStream = diffFile.OpenRead();
             var diffZip = new ZipArchive(diffStream, ZipArchiveMode.Read);
@@ -45,7 +45,7 @@ namespace OptifineInstaller
                     string trimmedName = name
                         .Substring("patch/".Length, name.Length - "patch/".Length - ".xdelta".Length);
 
-                    byte[] bytesMod = ApplyPatch(trimmedName, bytes, patterns, cfgMap, zrp);
+                    byte[] bytesMod = ApplyPatch(trimmedName, bytes, patterns, cfgMap, zrp, isOver1_17);
 
                     string nameMd5 = "patch/" + trimmedName + ".md5";
                     var md5Entry = diffZip.GetEntry(nameMd5);
@@ -152,10 +152,10 @@ namespace OptifineInstaller
             }
         }
 
-        public static byte[] ApplyPatch(string name, byte[] bytesDiff, Regex[] patterns, IDictionary<string, string> cfgMap, IResourceProvider resourceProvider)
+        public static byte[] ApplyPatch(string name, byte[] bytesDiff, Regex[] patterns, IDictionary<string, string> cfgMap, IResourceProvider resourceProvider, bool isOver1_17)
         {
             name = Utils.RemovePrefix(name, "/");
-            string baseName = GetPatchBase(name, patterns, cfgMap);
+            string baseName = GetPatchBase(name, patterns, cfgMap, isOver1_17);
             Debug.WriteLine("bs name:" + baseName);
             if (baseName == null)
                 throw new IOException("No patch base, name: " + name + ", patterns: " + Utils.ArrayToCommaSeparatedString(patterns));
@@ -170,7 +170,7 @@ namespace OptifineInstaller
             return outputStream.ToArray();
         }
 
-        private static string GetPatchBase(string name, Regex[] patterns, IDictionary<string, string> cfgMap)
+        private static string GetPatchBase(string name, Regex[] patterns, IDictionary<string, string> cfgMap, bool isOver1_17)
         {
             name = Utils.RemovePrefix(name, "/");
 
@@ -184,6 +184,15 @@ namespace OptifineInstaller
 
                 if (baseVal != null && baseVal.Trim() == "*")
                     return name;
+
+                if (isOver1_17)
+                {
+                    int groupCount = match.Groups.Count - 1;
+                    for (int g = 1; g <= groupCount; ++g)
+                    {
+                        baseVal = baseVal.Replace("$" + g, match.Groups[g].Value);
+                    }
+                }
 
                 return baseVal;
             }

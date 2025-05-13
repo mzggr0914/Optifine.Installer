@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace OptifineInstaller
@@ -31,10 +32,8 @@ namespace OptifineInstaller
 
             foreach (var versionTr in versionTrList)
             {
-                var mcVer = node
-               .SelectNodes(".//h2")
-               ?.Where(h2 => h2.StreamPosition < versionTr.StreamPosition)
-               .Last().InnerText.Split()[1];
+                var mcVer = Regex.Replace(node.SelectNodes(".//h2")?.
+                    Where(h2 => h2.StreamPosition < versionTr.StreamPosition).Last().InnerText.Split()[1], @"\.0$", "");
 
                 var forgeVersion = versionTr.SelectSingleNode(".//td[@class='colForge']").InnerText.Replace("Forge ", "").Replace("#", "");
 
