@@ -64,9 +64,16 @@ namespace OptifineInstaller
 
             CopyMinecraftVersion(mcVer, mcVerOf, dirMcVers);
             InstallOptiFineLibrary(mcVer, ofEd, dirMcLib, Utils.IsOver1_17(version));
-            InstallLaunchwrapperLibrary(dirMcLib);
-            UpdateJson(dirMcVers, mcVerOf, mcVer, ofEd);
-            JarFile = null;
+            if (!Utils.IsLegacyVersion(version))
+            {
+                InstallLaunchwrapperLibrary(dirMcLib);
+                UpdateJson(dirMcVers, mcVerOf, mcVer, ofEd);
+            }
+            else
+            {
+                UpdateJsonLegacy(dirMcVers, mcVerOf, new DirectoryInfo(Path.Combine(dirMc.FullName, "libraries")), mcVer, ofEd, Utils.GetLaunchwrapperVersionLegacy(version));
+            }
+                JarFile = null;
             JarFileZrp = null;
             diffStream.Dispose();
             jarFile.Delete();
@@ -123,6 +130,80 @@ namespace OptifineInstaller
             var utf8WithoutBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
 
             File.WriteAllText(jsonPath, updated.ToString().Replace("\r\n", "\n"), utf8WithoutBom);
+        }
+
+        public static void UpdateJsonLegacy(DirectoryInfo dirMcVers, string mcVerOf, DirectoryInfo dirMcLib, string mcVer, string ofEd, string launchwrapver)
+        {
+            // dirMcVers/mcVerOf
+            var dirMcVersOf = new DirectoryInfo(Path.Combine(dirMcVers.FullName, mcVerOf));
+            if (!dirMcVersOf.Exists)
+                throw new DirectoryNotFoundException($"Directory not found: {dirMcVersOf.FullName}");
+
+            // file: <mcVerOf>.json
+            var fileJson = new FileInfo(Path.Combine(dirMcVersOf.FullName, mcVerOf + ".json"));
+            if (!fileJson.Exists)
+                throw new FileNotFoundException($"JSON file not found: {fileJson.FullName}");
+
+            // 1) 파일 읽기
+            string json;
+            using (var reader = new StreamReader(fileJson.FullName, Encoding.UTF8))
+            {
+                json = reader.ReadToEnd();
+            }
+
+            // 2) 파싱
+            JObject root;
+            try
+            {
+                root = JObject.Parse(json);
+            }
+            catch (JsonException ex)
+            {
+                throw new Exception("JSON 파싱 실패", ex);
+            }
+
+            // 3) id, inheritsFrom 설정
+            root["id"] = mcVerOf;
+            root["inheritsFrom"] = mcVer;
+
+            // 4) libraries 배열 초기화
+            JArray libs = new JArray();
+            root["libraries"] = libs;
+
+            // 5) mainClass, minecraftArguments 조정
+            string mainClass = root.Value<string>("mainClass") ?? "";
+            if (!mainClass.StartsWith("net.minecraft.launchwrapper.", StringComparison.Ordinal))
+            {
+                // LaunchWrapper 사용하도록 설정
+                root["mainClass"] = "net.minecraft.launchwrapper.Launch";
+
+                string args = root.Value<string>("minecraftArguments") ?? "";
+                args += " --tweakClass optifine.OptiFineTweaker";
+                root["minecraftArguments"] = args;
+
+
+                // launchwrapper 라이브러리 추가
+                var libLw = new JObject
+                {
+                    ["name"] = "net.minecraft:launchwrapper:1.12"
+                };
+                libs.Add(libLw);
+            }
+
+            // 6) OptiFine 라이브러리 추가 (항상 맨 앞에)
+            var libOf = new JObject
+            {
+                ["name"] = $"optifine:OptiFine:{mcVer}_{ofEd}"
+            };
+            // JArray.Insert(0, ...) 대신 Add 후 Reverse 해도 되지만, 여기선 Insert 사용
+            libs.Insert(0, libOf);
+
+            // 7) 파일 쓰기
+            using (var writer = new StreamWriter(fileJson.FullName, false, Encoding.UTF8))
+            using (var jsonWriter = new JsonTextWriter(writer) { Formatting = Formatting.Indented })
+            {
+                root.WriteTo(jsonWriter);
+            }
         }
 
         private static string FormatDate(DateTime date)

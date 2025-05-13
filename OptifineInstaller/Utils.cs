@@ -174,6 +174,45 @@ public class Utils
         return false;
     }
 
+    public static string GetLaunchwrapperVersionLegacy(OptifineVersion version)
+    {
+        Version v1 = NormalizeVersion(version.MinecraftVersion);
+        Version v2 = NormalizeVersion("1.7.10");
+
+        int result = v1.CompareTo(v2);
+
+        if (result > 0)
+        {
+            return "1.12";
+        }
+        else if (result == 0)
+        {
+            var alphabet = version.OptifineEdition.Split('_')[2].Substring(0, 1);
+            if (alphabet == "E")
+                return "1.12";
+        }
+        return "1.7";
+    }
+
+    public static bool IsLegacyVersion(OptifineVersion version)
+    {
+        Version v1 = NormalizeVersion(version.MinecraftVersion);
+        Version v2 = NormalizeVersion("1.8.9");
+
+        int result = v1.CompareTo(v2);
+
+        if (result > 0)
+        {
+            return false;
+        }
+        else if (result == 0)
+        {
+            var alphabet = version.OptifineEdition.Split('_')[2].Substring(0, 1);
+            return !(alphabet == "L" || alphabet == "M");
+        }
+        return true;
+    }
+
     static Version NormalizeVersion(string versionStr)
     {
         var parts = versionStr.Split('.');

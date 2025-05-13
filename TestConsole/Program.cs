@@ -22,10 +22,16 @@ var version = Console.ReadLine();
 Console.WriteLine("selected version: " + version);
 
 var selectedVersion = versions.Find(x => x.Version == version);
+if (selectedVersion is null)
+{
+    Console.WriteLine("version not found");
+    return;
+}
 var minecraftPath = new MinecraftPath();
 var launcher = new MinecraftLauncher(minecraftPath);
 
 await launcher.InstallAsync(selectedVersion.MinecraftVersion);
+Console.WriteLine("done installing vanilla version");
 
 var versionName = await Installer.InstallOptifineAsync(minecraftPath.BasePath, selectedVersion);
 var process = await launcher.InstallAndBuildProcessAsync(versionName, new MLaunchOption
@@ -53,8 +59,13 @@ await process.WaitForExitAsync();
  * 
  * 
  *  KNOWN NON-WORKING VERSIONS
- * - OptiFine_1.8.9_HD_U_I7 
+ * - OptiFine_1.8.9_HD_U_I7
  * - OptiFine_1.8.9_HD_U_H7
  * - OptiFine_1.8.9_HD_U_H5
  * - OptiFine_1.8.8_HD_U_I7
+ */
+
+/*
+1.8.9_I7 ~ 1.7.10_E3 ==1.12
+1.7.10_D8 ~ 1.7.2_E3 == 1.7
  */
