@@ -1,37 +1,95 @@
-﻿using Newtonsoft.Json;
+﻿using HtmlAgilityPack;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace OptifineInstaller
 {
-    public static class Installer
+    public class Installer
     {
         private static FileInfo JarFile;
+
         private static ZipResourceProvider JarFileZrp;
 
-        public async static Task<string> InstallOptifineAsync(string Minecraftpath, OptifineVersion version)
-        {
-            var url = await version.GetDirectDownloadUrlAsync();
-            using (HttpClient client = new HttpClient())
-            {
-                using (HttpResponseMessage response = await client.GetAsync(url))
-                {
-                    response.EnsureSuccessStatusCode();
-                    string path = Path.Combine(Path.GetTempPath(), version.Version + ".jar");
-                    using (FileStream fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
-                    {
-                        await response.Content.CopyToAsync(fs);
-                    }
+        private readonly HttpClient _httpClient;
 
-                    DoInstall(new DirectoryInfo(Minecraftpath), new FileInfo(path), version);
-                    return $"{version.MinecraftVersion}-OptiFine_{version.OptifineEdition}";
+        public Installer(HttpClient client)
+        {
+            _httpClient = client;
+        }
+
+        public async Task<string> GetDirectDownloadUrlAsync(OptifineVersion version)
+        {
+            HttpClient client = new HttpClient();
+            var res = await client.GetAsync(version.DownloadUrl);
+            var html = await res.Content.ReadAsStringAsync();
+            var doc = new HtmlDocument();
+            doc.LoadHtml(html);
+            var node = doc.DocumentNode.SelectSingleNode("//a[@onclick='onDownload()']");
+            var href = node.GetAttributeValue("href", null);
+
+            return $"https://optifine.net/{href}";
+        }
+
+        public async Task<IEnumerable<OptifineVersion>> GetOptifineVersionsAsync()
+        {
+            var response = await _httpClient.GetAsync("https://optifine.net/downloads");
+            string html = await response.Content.ReadAsStringAsync();
+            var doc = new HtmlDocument();
+            doc.LoadHtml(html);
+            var node = doc.DocumentNode.SelectSingleNode("//td[@class='content']").SelectSingleNode(".//span[@class='downloads']");
+
+            List<OptifineVersion> versions = new List<OptifineVersion>();
+
+            var versionTrList = node.SelectNodes(".//tr[contains(@class, 'downloadLine')]");
+
+            foreach (var versionTr in versionTrList)
+            {
+                var mcVer = Regex.Replace(node.SelectNodes(".//h2")?.
+                    Where(h2 => h2.StreamPosition < versionTr.StreamPosition).Last().InnerText.Split()[1], @"\.0$", "");
+
+                var forgeVersion = versionTr.SelectSingleNode(".//td[@class='colForge']").InnerText.Replace("Forge ", "").Replace("#", "");
+
+                var version = new OptifineVersion
+                {
+                    MinecraftVersion = mcVer,
+                    OptifineEdition = versionTr.SelectSingleNode(".//td[@class='colFile']").InnerText.Split(new[] { ' ' }, 2)[1].Replace(" ", "_"),
+                    DownloadUrl = versionTr.SelectSingleNode(".//td[@class='colMirror']").SelectSingleNode("a").GetAttributeValue("href", null),
+                    ForgeVersion = forgeVersion != "Forge N/A" ? forgeVersion : null,
+                    IsPreviewVersion = versionTr.GetAttributeValue("class", "").Contains("downloadLinePreview"),
+                    UploadedDate = DateTime.ParseExact(versionTr.SelectSingleNode(".//td[@class='colDate']").InnerText, "dd.MM.yyyy", CultureInfo.InvariantCulture)
+                };
+                versions.Add(version);
+            }
+
+            return versions;
+        }
+
+        public async Task<string> InstallOptifineAsync(string Minecraftpath, OptifineVersion version)
+        {
+            var url = await GetDirectDownloadUrlAsync(version);
+
+            using (HttpResponseMessage response = await _httpClient.GetAsync(url))
+            {
+                response.EnsureSuccessStatusCode();
+                string path = Path.Combine(Path.GetTempPath(), version.Version + ".jar");
+                using (FileStream fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    await response.Content.CopyToAsync(fs);
                 }
+
+                DoInstall(new DirectoryInfo(Minecraftpath), new FileInfo(path), version);
+                return $"{version.MinecraftVersion}-OptiFine_{version.OptifineEdition}";
             }
         }
 
@@ -71,7 +129,7 @@ namespace OptifineInstaller
             }
             else
             {
-                UpdateJsonLegacy(dirMcVers, mcVerOf, new DirectoryInfo(Path.Combine(dirMc.FullName, "libraries")), mcVer, ofEd, Utils.GetLaunchwrapperVersionLegacy(version));
+                UpdateJsonLegacy(dirMcVers, mcVerOf, mcVer, ofEd, Utils.GetLaunchwrapperVersionLegacy(version));
             }
                 JarFile = null;
             JarFileZrp = null;
@@ -132,26 +190,22 @@ namespace OptifineInstaller
             File.WriteAllText(jsonPath, updated.ToString().Replace("\r\n", "\n"), utf8WithoutBom);
         }
 
-        public static void UpdateJsonLegacy(DirectoryInfo dirMcVers, string mcVerOf, DirectoryInfo dirMcLib, string mcVer, string ofEd, string launchwrapver)
+        public static void UpdateJsonLegacy(DirectoryInfo dirMcVers, string mcVerOf, string mcVer, string ofEd, string launchwrapper)
         {
-            // dirMcVers/mcVerOf
             var dirMcVersOf = new DirectoryInfo(Path.Combine(dirMcVers.FullName, mcVerOf));
             if (!dirMcVersOf.Exists)
                 throw new DirectoryNotFoundException($"Directory not found: {dirMcVersOf.FullName}");
 
-            // file: <mcVerOf>.json
             var fileJson = new FileInfo(Path.Combine(dirMcVersOf.FullName, mcVerOf + ".json"));
             if (!fileJson.Exists)
                 throw new FileNotFoundException($"JSON file not found: {fileJson.FullName}");
 
-            // 1) 파일 읽기
             string json;
             using (var reader = new StreamReader(fileJson.FullName, Encoding.UTF8))
             {
                 json = reader.ReadToEnd();
             }
 
-            // 2) 파싱
             JObject root;
             try
             {
@@ -162,43 +216,34 @@ namespace OptifineInstaller
                 throw new Exception("JSON 파싱 실패", ex);
             }
 
-            // 3) id, inheritsFrom 설정
             root["id"] = mcVerOf;
             root["inheritsFrom"] = mcVer;
 
-            // 4) libraries 배열 초기화
             JArray libs = new JArray();
             root["libraries"] = libs;
 
-            // 5) mainClass, minecraftArguments 조정
             string mainClass = root.Value<string>("mainClass") ?? "";
             if (!mainClass.StartsWith("net.minecraft.launchwrapper.", StringComparison.Ordinal))
             {
-                // LaunchWrapper 사용하도록 설정
                 root["mainClass"] = "net.minecraft.launchwrapper.Launch";
 
                 string args = root.Value<string>("minecraftArguments") ?? "";
                 args += " --tweakClass optifine.OptiFineTweaker";
                 root["minecraftArguments"] = args;
 
-
-                // launchwrapper 라이브러리 추가
                 var libLw = new JObject
                 {
-                    ["name"] = "net.minecraft:launchwrapper:1.12"
+                    ["name"] = $"net.minecraft:launchwrapper:{launchwrapper}"
                 };
                 libs.Add(libLw);
             }
 
-            // 6) OptiFine 라이브러리 추가 (항상 맨 앞에)
             var libOf = new JObject
             {
                 ["name"] = $"optifine:OptiFine:{mcVer}_{ofEd}"
             };
-            // JArray.Insert(0, ...) 대신 Add 후 Reverse 해도 되지만, 여기선 Insert 사용
             libs.Insert(0, libOf);
 
-            // 7) 파일 쓰기
             using (var writer = new StreamWriter(fileJson.FullName, false, Encoding.UTF8))
             using (var jsonWriter = new JsonTextWriter(writer) { Formatting = Formatting.Indented })
             {

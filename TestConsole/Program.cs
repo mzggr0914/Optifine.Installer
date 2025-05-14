@@ -2,9 +2,10 @@
 using CmlLib.Core.ProcessBuilder;
 using OptifineInstaller;
 using System;
+using System.Linq;
 using System.Net.Http;
 
-var loader = new OptifineVersionLoader(new HttpClient());
+var loader = new Installer(new HttpClient());
 var versions = await loader.GetOptifineVersionsAsync();
 
 Console.WriteLine($"{"Version",-30} {"Forge Ver",-10} {"Preview",-8} {"Uploaded",-12}");
@@ -21,7 +22,7 @@ var version = Console.ReadLine();
 
 Console.WriteLine("selected version: " + version);
 
-var selectedVersion = versions.Find(x => x.Version == version);
+var selectedVersion = versions.FirstOrDefault(x => x.Version == version);
 if (selectedVersion is null)
 {
     Console.WriteLine("version not found");
@@ -33,7 +34,9 @@ var launcher = new MinecraftLauncher(minecraftPath);
 await launcher.InstallAsync(selectedVersion.MinecraftVersion);
 Console.WriteLine("done installing vanilla version");
 
-var versionName = await Installer.InstallOptifineAsync(minecraftPath.BasePath, selectedVersion);
+var versionName = await loader.InstallOptifineAsync(minecraftPath.BasePath, selectedVersion);
+Console.WriteLine("done installing optifine");
+
 var process = await launcher.InstallAndBuildProcessAsync(versionName, new MLaunchOption
 {
     Session = CmlLib.Core.Auth.MSession.CreateLegacyOfflineSession("lunar123"),
@@ -46,6 +49,7 @@ await process.WaitForExitAsync();
 /*
  * CONFIRMED WORKING VERSIONS
  * - OptiFine_1.21.4_HD_U_J4_pre2
+ * - OptiFine_1.19.4_HD_U_I4
  * - OptiFine_1.17.1_HD_U_H1
  * - OptiFine_1.17.1_HD_U_G9
  * - OptiFine_1.17_HD_U_G9_pre25
@@ -55,17 +59,15 @@ await process.WaitForExitAsync();
  * - OptiFine_1.12.2_HD_U_G6_pre1
  * - OptiFine_1.8.9_HD_U_M6_pre2
  * - OptiFine_1.8.9_HD_U_M5
- * - OptiFine_1.8.9_HD_U_L5 -- Earliest verified working version
- * 
- * 
- *  KNOWN NON-WORKING VERSIONS
+ * - OptiFine_1.8.9_HD_U_L5
  * - OptiFine_1.8.9_HD_U_I7
  * - OptiFine_1.8.9_HD_U_H7
  * - OptiFine_1.8.9_HD_U_H5
  * - OptiFine_1.8.8_HD_U_I7
- */
-
-/*
-1.8.9_I7 ~ 1.7.10_E3 ==1.12
-1.7.10_D8 ~ 1.7.2_E3 == 1.7
+ * - OptiFine_1.7.2_HD_U_E3
+ * 
+ * KNOWN NON-WORKING VERSIONS
+ * - not yet
+ * 
+ * 
  */
