@@ -154,7 +154,7 @@ public class Utils
         return buf.ToString();
     }
 
-    public static bool IsOver1_17(OptifineVersion version)
+    public static bool IsLateVersion(OptifineVersion version)
     {
         Version v1 = NormalizeVersion(version.MinecraftVersion);
         Version v2 = NormalizeVersion("1.17.1");

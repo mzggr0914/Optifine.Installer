@@ -19,9 +19,7 @@ namespace OptifineInstaller
             ZipArchiveEntry entry = zipArchive.GetEntry(path);
 
             if (entry == null)
-            {
                 return null;
-            }
 
             return entry.Open();
         }

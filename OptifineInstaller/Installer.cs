@@ -61,14 +61,13 @@ namespace OptifineInstaller
                 var forgeVersion = versionTr.SelectSingleNode(".//td[@class='colForge']").InnerText.Replace("Forge ", "").Replace("#", "");
 
                 var version = new OptifineVersion
-                {
-                    MinecraftVersion = mcVer,
-                    OptifineEdition = versionTr.SelectSingleNode(".//td[@class='colFile']").InnerText.Split(new[] { ' ' }, 2)[1].Replace(" ", "_"),
-                    DownloadUrl = versionTr.SelectSingleNode(".//td[@class='colMirror']").SelectSingleNode("a").GetAttributeValue("href", null),
-                    ForgeVersion = forgeVersion != "Forge N/A" ? forgeVersion : null,
-                    IsPreviewVersion = versionTr.GetAttributeValue("class", "").Contains("downloadLinePreview"),
-                    UploadedDate = DateTime.ParseExact(versionTr.SelectSingleNode(".//td[@class='colDate']").InnerText, "dd.MM.yyyy", CultureInfo.InvariantCulture)
-                };
+                (
+                    mcVer,
+                    versionTr.SelectSingleNode(".//td[@class='colFile']").InnerText.Split(new[] { ' ' }, 2)[1].Replace(" ", "_"),
+                    forgeVersion != "Forge N/A" ? forgeVersion : null,
+                    versionTr.GetAttributeValue("class", "").Contains("downloadLinePreview"),
+                    DateTime.ParseExact(versionTr.SelectSingleNode(".//td[@class='colDate']").InnerText, "dd.MM.yyyy", CultureInfo.InvariantCulture)
+                );
                 versions.Add(version);
             }
 
@@ -121,7 +120,7 @@ namespace OptifineInstaller
             Debug.WriteLine($"Minecraft_OptiFine Version: {mcVerOf}");
 
             CopyMinecraftVersion(mcVer, mcVerOf, dirMcVers);
-            InstallOptiFineLibrary(mcVer, ofEd, dirMcLib, Utils.IsOver1_17(version));
+            InstallOptiFineLibrary(mcVer, ofEd, dirMcLib, Utils.IsLateVersion(version));
             if (!Utils.IsLegacyVersion(version))
             {
                 InstallLaunchwrapperLibrary(dirMcLib);
@@ -131,7 +130,7 @@ namespace OptifineInstaller
             {
                 UpdateJsonLegacy(dirMcVers, mcVerOf, mcVer, ofEd, Utils.GetLaunchwrapperVersionLegacy(version));
             }
-                JarFile = null;
+            JarFile = null;
             JarFileZrp = null;
             diffStream.Dispose();
             jarFile.Delete();
@@ -141,9 +140,7 @@ namespace OptifineInstaller
         {
             var jsonPath = Path.Combine(versionsDir.FullName, versionWithOf, versionWithOf + ".json");
             string rawJson = File.ReadAllText(jsonPath, Encoding.UTF8);
-            JObject original;
-            try { original = JObject.Parse(rawJson); }
-            catch (JsonException e) { throw new IOException($"JSON parsing failed: {jsonPath}", e); }
+            JObject original = JObject.Parse(rawJson);
 
             var updated = new JObject
             {
@@ -193,12 +190,8 @@ namespace OptifineInstaller
         public static void UpdateJsonLegacy(DirectoryInfo dirMcVers, string mcVerOf, string mcVer, string ofEd, string launchwrapper)
         {
             var dirMcVersOf = new DirectoryInfo(Path.Combine(dirMcVers.FullName, mcVerOf));
-            if (!dirMcVersOf.Exists)
-                throw new DirectoryNotFoundException($"Directory not found: {dirMcVersOf.FullName}");
 
             var fileJson = new FileInfo(Path.Combine(dirMcVersOf.FullName, mcVerOf + ".json"));
-            if (!fileJson.Exists)
-                throw new FileNotFoundException($"JSON file not found: {fileJson.FullName}");
 
             string json;
             using (var reader = new StreamReader(fileJson.FullName, Encoding.UTF8))
@@ -206,15 +199,7 @@ namespace OptifineInstaller
                 json = reader.ReadToEnd();
             }
 
-            JObject root;
-            try
-            {
-                root = JObject.Parse(json);
-            }
-            catch (JsonException ex)
-            {
-                throw new Exception("JSON 파싱 실패", ex);
-            }
+            JObject root = JObject.Parse(json);
 
             root["id"] = mcVerOf;
             root["inheritsFrom"] = mcVer;
@@ -272,7 +257,6 @@ namespace OptifineInstaller
 
             var versionDir = new DirectoryInfo(Path.Combine(dirMcLib.Parent.FullName, $"versions/{mcVer}"));
             var baseJar = new FileInfo(Path.Combine(versionDir.FullName, $"{mcVer}.jar"));
-            if (!baseJar.Exists) { ShowMessageVersionNotFound(mcVer); throw new Exception("QUIET"); }
 
             dirDest.Create();
             Patcher.Process(baseJar, JarFile, fileDest, isOver117);
@@ -289,7 +273,7 @@ namespace OptifineInstaller
             Debug.WriteLine($"Source: {fileName}");
             Debug.WriteLine($"Dest: {fileDest}");
 
-            using (var stream = JarFileZrp.GetResourceStream(fileName) ?? throw new IOException($"File not found: {fileName}"))
+            using (var stream = JarFileZrp.GetResourceStream(fileName))
             {
                 dirDest.Create();
                 using (var outStream = File.Create(fileDest.FullName))
@@ -302,18 +286,31 @@ namespace OptifineInstaller
         private static void CopyMinecraftVersion(string mcVer, string mcVerOf, DirectoryInfo dirMcVer)
         {
             var dirVerMc = new DirectoryInfo(Path.Combine(dirMcVer.FullName, mcVer));
-            if (!dirVerMc.Exists) { ShowMessageVersionNotFound(mcVer); throw new Exception("Please Install Vanilla Version Minecraft First"); }
+            if (!dirVerMc.Exists)
+            {
+                ShowMessageVersionNotFound(mcVer);
+                throw new DirectoryNotFoundException($"Please Install {mcVer} Vanilla Version Minecraft First");
+            }
 
             var dirVerMcOf = new DirectoryInfo(Path.Combine(dirMcVer.FullName, mcVerOf));
             dirVerMcOf.Create();
 
             var fileJarMc = new FileInfo(Path.Combine(dirVerMc.FullName, $"{mcVer}.jar"));
             var fileJarMcOf = new FileInfo(Path.Combine(dirVerMcOf.FullName, $"{mcVerOf}.jar"));
-            if (!fileJarMc.Exists) { ShowMessageVersionNotFound(mcVer); throw new Exception("QUIET"); }
+            if (!fileJarMc.Exists)
+            {
+                ShowMessageVersionNotFound(mcVer);
+                throw new FileNotFoundException($"{mcVer}.jar file not found");
+            }
             File.Copy(fileJarMc.FullName, fileJarMcOf.FullName);
 
             var fileJsonMc = new FileInfo(Path.Combine(dirVerMc.FullName, $"{mcVer}.json"));
             var fileJsonMcOf = new FileInfo(Path.Combine(dirVerMcOf.FullName, $"{mcVerOf}.json"));
+            if (!fileJsonMc.Exists)
+            {
+                ShowMessageVersionNotFound(mcVer);
+                throw new FileNotFoundException($"{mcVer}.json file not found");
+            }
             File.Copy(fileJsonMc.FullName, fileJsonMcOf.FullName);
         }
 
@@ -324,12 +321,15 @@ namespace OptifineInstaller
 
         private static string GetLaunchwrapperVersion()
         {
-            using (var stream = JarFileZrp.GetResourceStream("launchwrapper-of.txt") ?? throw new IOException("File not found: launchwrapper-of.txt"))
+            using (var stream = JarFileZrp.GetResourceStream("launchwrapper-of.txt")
+                          ?? throw new FileNotFoundException("Resource not found: launchwrapper-of.txt"))
             using (var reader = new StreamReader(stream, Encoding.ASCII))
             {
                 var str = reader.ReadToEnd().Trim();
-                if (!System.Text.RegularExpressions.Regex.IsMatch(str, "^[0-9\\.]+$"))
-                    throw new IOException($"Invalid launchwrapper version: {str}");
+
+                if (!Regex.IsMatch(str, @"^[0-9\.]+$"))
+                    throw new FormatException($"Invalid launchwrapper version format: '{str}'");
+
                 return str;
             }
         }

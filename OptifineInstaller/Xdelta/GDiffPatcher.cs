@@ -97,7 +97,7 @@ namespace OptifineInstaller.Xdelta
         {
             if (offset + length > source.Length)
             {
-                throw new Exception("truncated source file, aborting");
+                throw new InvalidDataException("truncated source file, aborting");
             }
             byte[] buf = new byte[256];
             source.Seek(offset);

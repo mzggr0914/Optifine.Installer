@@ -59,7 +59,7 @@ namespace OptifineInstaller
 
                         if (!md5Str.Equals(md5ModStr, StringComparison.OrdinalIgnoreCase))
                         {
-                            throw new Exception(
+                            throw new InvalidDataException(
                                 $"MD5 not matching, name: {trimmedName}, saved: {md5Str}, patched: {md5ModStr}"
                             );
                         }
@@ -84,7 +84,7 @@ namespace OptifineInstaller
             }
             diffZip.Dispose();
             diffStream.Dispose();
-         
+
             zipOut.Dispose();
             modStream.Dispose();
 
@@ -122,7 +122,7 @@ namespace OptifineInstaller
                     var trimmed = line.Trim();
                     if (trimmed.Length == 0 || trimmed.StartsWith("#")) continue;
                     var parts = trimmed.Split(new char[] { '=' }, 2);
-                    if (parts.Length != 2) throw new IOException($"Invalid patch configuration: {trimmed}");
+                    if (parts.Length != 2) throw new FormatException($"Invalid patch configuration: {trimmed}");
                     var key = parts[0].Trim();
                     var val = parts[1].Trim();
                     cfgMap[key] = val;
@@ -158,7 +158,7 @@ namespace OptifineInstaller
             string baseName = GetPatchBase(name, patterns, cfgMap, isOver1_17);
             Debug.WriteLine("bs name:" + baseName);
             if (baseName == null)
-                throw new IOException("No patch base, name: " + name + ", patterns: " + Utils.ArrayToCommaSeparatedString(patterns));
+                throw new FileNotFoundException("No patch base, name: " + name + ", patterns: " + Utils.ArrayToCommaSeparatedString(patterns));
 
             Stream baseIn = resourceProvider.GetResourceStream(baseName) ?? throw new IOException("Base resource not found: " + baseName);
             byte[] baseBytes = Utils.ReadAll(baseIn);
