@@ -5,6 +5,7 @@ Minecraft OptiFine Installer.
 
 * Fetch available OptiFine versions from the official source.
 * Display version details including Forge compatibility, preview status, and upload date.
+* Install Nearly All OptiFine Versions
 
 ## Sample Code With [CmlLib.Core](https://github.com/CmlLib/CmlLib.Core)
 
