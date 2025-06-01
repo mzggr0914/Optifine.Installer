@@ -1,11 +1,18 @@
 # OptifineInstaller
 Minecraft OptiFine Installer.
 
+[![Nuget Badge](https://img.shields.io/nuget/v/OptifineInstaller)](https://www.nuget.org/packages/OptifineInstaller)
+[![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/mzggr0914/OptifineInstaller/blob/master/LICENSE)
+
 ## Features
 
 * Fetch available OptiFine versions from the official source.
 * Display version details including Forge compatibility, preview status, and upload date.
 * Install Nearly All OptiFine Versions
+
+## Install
+
+Install the [Optifine Nuget package](https://www.nuget.org/packages/OptifineInstaller)
 
 ## Sample Code With [CmlLib.Core](https://github.com/CmlLib/CmlLib.Core)
 
