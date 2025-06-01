@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 public class Utils
@@ -62,33 +63,6 @@ public class Utils
         byte[] bytes = baos.ToArray();
 
         return bytes;
-    }
-
-    public static int Find(byte[] buffer, byte[] pattern)
-    {
-        return Find(buffer, 0, pattern);
-    }
-
-    public static int Find(byte[] buffer, int startIndex, byte[] pattern)
-    {
-        for (int i = startIndex; i < buffer.Length - pattern.Length; i++)
-        {
-            bool found = true;
-
-            for (int pos = 0; pos < pattern.Length; pos++)
-            {
-                if (pattern[pos] != buffer[i + pos])
-                {
-                    found = false;
-                    break;
-                }
-            }
-
-            if (found)
-                return i;
-        }
-
-        return -1;
     }
 
     public static string RemovePrefix(string str, string prefix)
@@ -154,73 +128,36 @@ public class Utils
         return buf.ToString();
     }
 
-    public static bool IsLateVersion(OptifineVersion version)
+    public static bool IsLegacyVersion(OptifineVersion version)
     {
-        Version v1 = NormalizeVersion(version.MinecraftVersion);
-        Version v2 = NormalizeVersion("1.17.1");
+        int cmp = NormalizeVersion(version.MinecraftVersion)
+            .CompareTo(NormalizeVersion("1.8.9"));
+        if (cmp > 0) return false;
+        if (cmp < 0) return true;
+        char c = version.OptifineEdition.Split('_')[2][0];
+        return c != 'L' && c != 'M';
+    }
 
-        int result = v1.CompareTo(v2);
-
-        if (result > 0)
-        {
-            return true;
-
-        }
-        else if (result == 0)
-        {
-            return version.OptifineEdition != "HD_U_G9";
-        }
-        return false;
+    public static bool IsNewVersion(OptifineVersion version)
+    {
+        int cmp = NormalizeVersion(version.MinecraftVersion)
+            .CompareTo(NormalizeVersion("1.17.1"));
+        return cmp > 0 || (cmp == 0 && version.OptifineEdition != "HD_U_G9");
     }
 
     public static string GetLaunchwrapperVersionLegacy(OptifineVersion version)
     {
-        Version v1 = NormalizeVersion(version.MinecraftVersion);
-        Version v2 = NormalizeVersion("1.7.10");
-
-        int result = v1.CompareTo(v2);
-
-        if (result > 0)
-        {
+        var v = NormalizeVersion(version.MinecraftVersion);
+        var baseV = NormalizeVersion("1.7.10");
+        if (v.CompareTo(baseV) > 0 || (v.CompareTo(baseV) == 0 && version.OptifineEdition.Split('_')[2].StartsWith("E")))
             return "1.12";
-        }
-        else if (result == 0)
-        {
-            var alphabet = version.OptifineEdition.Split('_')[2].Substring(0, 1);
-            if (alphabet == "E")
-                return "1.12";
-        }
         return "1.7";
     }
 
-    public static bool IsLegacyVersion(OptifineVersion version)
+    private static Version NormalizeVersion(string versionStr)
     {
-        Version v1 = NormalizeVersion(version.MinecraftVersion);
-        Version v2 = NormalizeVersion("1.8.9");
-
-        int result = v1.CompareTo(v2);
-
-        if (result > 0)
-        {
-            return false;
-        }
-        else if (result == 0)
-        {
-            var alphabet = version.OptifineEdition.Split('_')[2].Substring(0, 1);
-            return !(alphabet == "L" || alphabet == "M");
-        }
-        return true;
-    }
-
-    static Version NormalizeVersion(string versionStr)
-    {
-        var parts = versionStr.Split('.');
-        while (parts.Length < 4)
-        {
-            versionStr += ".0";
-            parts = versionStr.Split('.');
-        }
-
-        return new Version(versionStr);
+        var parts = versionStr.Split('.').Select(int.Parse).ToList();
+        while (parts.Count < 4) parts.Add(0);
+        return new Version(parts[0], parts[1], parts[2], parts[3]);
     }
 }

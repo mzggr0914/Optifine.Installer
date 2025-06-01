@@ -1,6 +1,4 @@
 ﻿using HtmlAgilityPack;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,6 +8,8 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -120,119 +120,180 @@ namespace OptifineInstaller
             Debug.WriteLine($"Minecraft_OptiFine Version: {mcVerOf}");
 
             CopyMinecraftVersion(mcVer, mcVerOf, dirMcVers);
-            InstallOptiFineLibrary(mcVer, ofEd, dirMcLib, Utils.IsLateVersion(version));
-            if (!Utils.IsLegacyVersion(version))
-            {
-                InstallLaunchwrapperLibrary(dirMcLib);
-                UpdateJson(dirMcVers, mcVerOf, mcVer, ofEd);
-            }
+            InstallOptiFineLibrary(mcVer, ofEd, dirMcLib, Utils.IsNewVersion(version));
+            if (Utils.IsLegacyVersion(version))
+                UpdateJsonLegacy(dirMcVers, mcVer, ofEd, Utils.GetLaunchwrapperVersionLegacy(version));
             else
             {
-                UpdateJsonLegacy(dirMcVers, mcVerOf, mcVer, ofEd, Utils.GetLaunchwrapperVersionLegacy(version));
+                InstallLaunchwrapperLibrary(dirMcLib);
+                UpdateJson(dirMcVers, mcVer, ofEd);
             }
-            JarFile = null;
-            JarFileZrp = null;
+            JarFile = null; JarFileZrp = null;
             diffStream.Dispose();
             jarFile.Delete();
         }
 
-        private static void UpdateJson(DirectoryInfo versionsDir, string versionWithOf, string baseVersion, string ofEdition)
+        private static void UpdateJson(DirectoryInfo versionsDir, string mcVer, string ofEd)
         {
-            var jsonPath = Path.Combine(versionsDir.FullName, versionWithOf, versionWithOf + ".json");
+            string mcVerOf = $"{mcVer}-OptiFine_{ofEd}";
+            var jsonPath = Path.Combine(versionsDir.FullName, mcVerOf, $"{mcVerOf}.json");
             string rawJson = File.ReadAllText(jsonPath, Encoding.UTF8);
-            JObject original = JObject.Parse(rawJson);
 
-            var updated = new JObject
+            using (JsonDocument originalDoc = JsonDocument.Parse(rawJson))
             {
-                ["id"] = versionWithOf,
-                ["inheritsFrom"] = baseVersion,
-                ["time"] = FormatDate(DateTime.Now),
-                ["releaseTime"] = FormatDate(DateTime.Now),
-                ["type"] = "release",
-                ["libraries"] = new JArray()
-            };
-            var libraries = (JArray)updated["libraries"];
-            string mainClass = (string)original["mainClass"];
-            if (string.IsNullOrEmpty(mainClass) || !mainClass.StartsWith("net.minecraft.launchwrapper."))
-            {
-                updated["mainClass"] = "net.minecraft.launchwrapper.Launch";
-                if (original.TryGetValue("minecraftArguments", out var mcArgsToken))
+                JsonElement root = originalDoc.RootElement;
+
+                var updated = new JsonObject
                 {
-                    string mcArgs = mcArgsToken.ToString() + " --tweakClass optifine.OptiFineTweaker";
-                    updated["minecraftArguments"] = mcArgs;
+                    ["id"] = mcVerOf,
+                    ["inheritsFrom"] = mcVer,
+                    ["time"] = FormatDate(DateTime.Now),
+                    ["releaseTime"] = FormatDate(DateTime.Now),
+                    ["type"] = "release",
+                    ["libraries"] = new JsonArray()
+                };
+
+                JsonArray libraries = (JsonArray)updated["libraries"];
+
+                string mainClass = null;
+                if (root.TryGetProperty("mainClass", out JsonElement mcElement) && mcElement.ValueKind == JsonValueKind.String)
+                {
+                    mainClass = mcElement.GetString();
                 }
-                else
+
+                if (string.IsNullOrEmpty(mainClass) || !mainClass.StartsWith("net.minecraft.launchwrapper.", StringComparison.Ordinal))
                 {
-                    updated["minimumLauncherVersion"] = "21";
-                    var arguments = new JObject
+                    updated["mainClass"] = "net.minecraft.launchwrapper.Launch";
+
+                    if (root.TryGetProperty("minecraftArguments", out JsonElement mcArgsToken) && mcArgsToken.ValueKind == JsonValueKind.String)
                     {
-                        ["game"] = new JArray("--tweakClass", "optifine.OptiFineTweaker")
-                    };
-                    updated["arguments"] = arguments;
+                        string mcArgs = mcArgsToken.GetString() + " --tweakClass optifine.OptiFineTweaker";
+                        updated["minecraftArguments"] = mcArgs;
+                    }
+                    else
+                    {
+                        updated["minimumLauncherVersion"] = "21";
+
+                        var arguments = new JsonObject
+                        {
+                            ["game"] = new JsonArray("--tweakClass", "optifine.OptiFineTweaker")
+                        };
+                        updated["arguments"] = arguments;
+                    }
+
+                    libraries.Add(new JsonObject
+                    {
+                        ["name"] = "optifine:launchwrapper-of:" + GetLaunchwrapperVersion()
+                    });
                 }
-                libraries.Add(new JObject
+
+                libraries.Insert(0, new JsonObject
                 {
-                    ["name"] = "optifine:launchwrapper-of:" + GetLaunchwrapperVersion()
+                    ["name"] = $"optifine:OptiFine:{mcVer}_{ofEd}"
                 });
+
+                Directory.CreateDirectory(Path.GetDirectoryName(jsonPath));
+
+                var utf8WithoutBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+
+                var options = new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                };
+
+                string resultJson = updated.ToJsonString(options);
+                resultJson = resultJson.Replace("\r\n", "\n");
+
+                File.WriteAllText(jsonPath, resultJson, utf8WithoutBom);
             }
-
-            libraries.Insert(0, new JObject
-            {
-                ["name"] = $"optifine:OptiFine:{baseVersion}_{ofEdition}"
-            });
-
-            Directory.CreateDirectory(Path.GetDirectoryName(jsonPath));
-            var utf8WithoutBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
-
-            File.WriteAllText(jsonPath, updated.ToString().Replace("\r\n", "\n"), utf8WithoutBom);
         }
 
-        public static void UpdateJsonLegacy(DirectoryInfo dirMcVers, string mcVerOf, string mcVer, string ofEd, string launchwrapper)
+        private static void UpdateJsonLegacy(DirectoryInfo versionsDir, string mcVer, string ofEd, string launchwrapper)
         {
-            var dirMcVersOf = new DirectoryInfo(Path.Combine(dirMcVers.FullName, mcVerOf));
-
+            string mcVerOf = $"{mcVer}-OptiFine_{ofEd}";
+            var dirMcVersOf = new DirectoryInfo(Path.Combine(versionsDir.FullName, mcVerOf));
             var fileJson = new FileInfo(Path.Combine(dirMcVersOf.FullName, mcVerOf + ".json"));
-
             string json;
             using (var reader = new StreamReader(fileJson.FullName, Encoding.UTF8))
             {
                 json = reader.ReadToEnd();
             }
-
-            JObject root = JObject.Parse(json);
-
-            root["id"] = mcVerOf;
-            root["inheritsFrom"] = mcVer;
-
-            JArray libs = new JArray();
-            root["libraries"] = libs;
-
-            string mainClass = root.Value<string>("mainClass") ?? "";
-            if (!mainClass.StartsWith("net.minecraft.launchwrapper.", StringComparison.Ordinal))
+            using (JsonDocument originalDoc = JsonDocument.Parse(json))
             {
-                root["mainClass"] = "net.minecraft.launchwrapper.Launch";
-
-                string args = root.Value<string>("minecraftArguments") ?? "";
-                args += " --tweakClass optifine.OptiFineTweaker";
-                root["minecraftArguments"] = args;
-
-                var libLw = new JObject
+                JsonElement root = originalDoc.RootElement;
+                string originalMainClass = "";
+                if (root.TryGetProperty("mainClass", out JsonElement mcElement) && mcElement.ValueKind == JsonValueKind.String)
                 {
-                    ["name"] = $"net.minecraft:launchwrapper:{launchwrapper}"
-                };
-                libs.Add(libLw);
-            }
-
-            var libOf = new JObject
-            {
-                ["name"] = $"optifine:OptiFine:{mcVer}_{ofEd}"
-            };
-            libs.Insert(0, libOf);
-
-            using (var writer = new StreamWriter(fileJson.FullName, false, Encoding.UTF8))
-            using (var jsonWriter = new JsonTextWriter(writer) { Formatting = Formatting.Indented })
-            {
-                root.WriteTo(jsonWriter);
+                    originalMainClass = mcElement.GetString();
+                }
+                bool needsOverride = !originalMainClass.StartsWith("net.minecraft.launchwrapper.", StringComparison.Ordinal);
+                string originalMcArgs = "";
+                if (root.TryGetProperty("minecraftArguments", out JsonElement maElement) && maElement.ValueKind == JsonValueKind.String)
+                {
+                    originalMcArgs = maElement.GetString();
+                }
+                var options = new JsonWriterOptions { Indented = true };
+                using (var stream = new MemoryStream())
+                {
+                    using (var writer = new Utf8JsonWriter(stream, options))
+                    {
+                        writer.WriteStartObject();
+                        foreach (JsonProperty prop in root.EnumerateObject())
+                        {
+                            string name = prop.Name;
+                            if (name == "id" || name == "inheritsFrom" || name == "libraries")
+                            {
+                                continue;
+                            }
+                            if (name == "mainClass")
+                            {
+                                if (needsOverride) continue;
+                                writer.WritePropertyName("mainClass");
+                                writer.WriteStringValue(prop.Value.GetString());
+                                continue;
+                            }
+                            if (name == "minecraftArguments")
+                            {
+                                if (needsOverride) continue;
+                                writer.WritePropertyName("minecraftArguments");
+                                writer.WriteStringValue(prop.Value.GetString());
+                                continue;
+                            }
+                            writer.WritePropertyName(name);
+                            prop.Value.WriteTo(writer);
+                        }
+                        writer.WriteString("id", mcVerOf);
+                        writer.WriteString("inheritsFrom", mcVer);
+                        writer.WritePropertyName("libraries");
+                        writer.WriteStartArray();
+                        writer.WriteStartObject();
+                        writer.WriteString("name", $"optifine:OptiFine:{mcVer}_{ofEd}");
+                        writer.WriteEndObject();
+                        if (needsOverride)
+                        {
+                            writer.WriteStartObject();
+                            writer.WriteString("name", $"net.minecraft:launchwrapper:{launchwrapper}");
+                            writer.WriteEndObject();
+                        }
+                        writer.WriteEndArray();
+                        if (needsOverride)
+                        {
+                            writer.WriteString("mainClass", "net.minecraft.launchwrapper.Launch");
+                            string args = originalMcArgs + " --tweakClass optifine.OptiFineTweaker";
+                            writer.WriteString("minecraftArguments", args);
+                        }
+                        writer.WriteEndObject();
+                        writer.Flush();
+                    }
+                    string resultJson = Encoding.UTF8.GetString(stream.ToArray());
+                    resultJson = resultJson.Replace("\r\n", "\n");
+                    var utf8WithoutBom = new UTF8Encoding(false);
+                    Directory.CreateDirectory(Path.GetDirectoryName(fileJson.FullName));
+                    using (var writerFile = new StreamWriter(fileJson.FullName, false, utf8WithoutBom))
+                    {
+                        writerFile.Write(resultJson);
+                    }
+                }
             }
         }
 
