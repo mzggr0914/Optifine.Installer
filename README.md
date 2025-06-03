@@ -12,7 +12,7 @@ Minecraft OptiFine Installer.
 
 ## Install
 
-Install the [Optifine Nuget package](https://www.nuget.org/packages/OptifineInstaller)
+Install the [OptifineInstaller Nuget package](https://www.nuget.org/packages/OptifineInstaller)
 
 ## Sample Code With [CmlLib.Core](https://github.com/CmlLib/CmlLib.Core)
 
