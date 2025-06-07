@@ -10,7 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\OptifineInstaller\OptifineInstaller.csproj" />
+    <ProjectReference Include="..\OptifineInstaller\Optifine.Installer.csproj" />
   </ItemGroup>
 
 </Project>

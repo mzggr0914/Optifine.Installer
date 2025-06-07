@@ -1,4 +1,4 @@
-﻿using OptifineInstaller.Xdelta;
+﻿using Optifine.Installer.Xdelta;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace OptifineInstaller
+namespace Optifine.Installer
 {
     public static class Patcher
     {

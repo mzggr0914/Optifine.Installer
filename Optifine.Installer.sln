@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36025.13
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OptifineInstaller", "OptifineInstaller\OptifineInstaller.csproj", "{6F2C86C7-47A9-4082-9F28-064D500A9E30}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Optifine.Installer", "OptifineInstaller\Optifine.Installer.csproj", "{6F2C86C7-47A9-4082-9F28-064D500A9E30}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestConsole", "TestConsole\TestConsole.csproj", "{99EB981C-9788-4AAF-95C8-FAF429ADC4F1}"
 EndProject

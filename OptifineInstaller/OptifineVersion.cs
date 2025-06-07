@@ -1,10 +1,10 @@
 ﻿using System;
 
-namespace OptifineInstaller
+namespace Optifine.Installer
 {
     public class OptifineVersion
     {
-        public string Version => $"OptiFine_{MinecraftVersion}_{OptifineEdition}";
+        public string Version => $"{(IsPreviewVersion ? "preview_" : "")}OptiFine_{MinecraftVersion}_{OptifineEdition}";
         public string MinecraftVersion { get; }
         public string OptifineEdition { get; }
         public string ForgeVersion { get; }

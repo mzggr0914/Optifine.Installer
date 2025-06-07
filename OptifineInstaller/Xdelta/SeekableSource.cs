@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace OptifineInstaller.Xdelta
+namespace Optifine.Installer.Xdelta
 {
     public interface ISeekableSource : IDisposable
     {

@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace OptifineInstaller
+namespace Optifine.Installer
 {
     public interface IResourceProvider
     {

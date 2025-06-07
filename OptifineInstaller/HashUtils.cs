@@ -1,7 +1,7 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 
-namespace OptifineInstaller
+namespace Optifine.Installer
 {
     public static class HashUtils
     {

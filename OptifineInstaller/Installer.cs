@@ -13,9 +13,9 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace OptifineInstaller
+namespace Optifine.Installer
 {
-    public class Installer
+    public class OptifineInstaller
     {
         private static FileInfo JarFile;
 
@@ -23,7 +23,7 @@ namespace OptifineInstaller
 
         private readonly HttpClient _httpClient;
 
-        public Installer(HttpClient client)
+        public OptifineInstaller(HttpClient client)
         {
             _httpClient = client;
         }
@@ -74,7 +74,7 @@ namespace OptifineInstaller
             return versions;
         }
 
-        public async Task<string> InstallOptifineAsync(string Minecraftpath, OptifineVersion version)
+        public async Task<string> InstallOptifineAsync(string minecraftpath, OptifineVersion version)
         {
             var url = await GetDirectDownloadUrlAsync(version);
 
@@ -87,9 +87,16 @@ namespace OptifineInstaller
                     await response.Content.CopyToAsync(fs);
                 }
 
-                DoInstall(new DirectoryInfo(Minecraftpath), new FileInfo(path), version);
+                DoInstall(new DirectoryInfo(minecraftpath), new FileInfo(path), version);
                 return $"{version.MinecraftVersion}-OptiFine_{version.OptifineEdition}";
             }
+        }
+
+        public async Task<string> InstallOptifineAsync(string minecraftpath, string optifineVersion)
+        {
+            var versions = await GetOptifineVersionsAsync();
+            var version = versions.FirstOrDefault(x => x.Version == optifineVersion);
+            return await InstallOptifineAsync(minecraftpath, version);
         }
 
         private static void DoInstall(DirectoryInfo dirMc, FileInfo jarFile, OptifineVersion version)

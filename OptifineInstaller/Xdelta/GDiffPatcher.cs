@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace OptifineInstaller.Xdelta
+namespace Optifine.Installer.Xdelta
 {
     public class GDiffPatcher
     {
