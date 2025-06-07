@@ -3,9 +3,9 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <RepositoryUrl>https://github.com/mzggr0914/OptifineInstaller</RepositoryUrl>
+    <RepositoryUrl>https://github.com/mzggr0914/Optifine.Installer</RepositoryUrl>
     <PackageTags>minecraft;installer;optifine</PackageTags>
-    <PackageProjectUrl>https://github.com/mzggr0914/OptifineInstaller</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/mzggr0914/Optifine.Installer</PackageProjectUrl>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Version>1.0.1</Version>
     <PackageReadmeFile>README.md</PackageReadmeFile>

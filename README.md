@@ -1,8 +1,8 @@
 # Optifine.Installer
 Minecraft OptiFine Installer.
 
-[![Nuget Badge](https://img.shields.io/nuget/v/OptifineInstaller)](https://www.nuget.org/packages/OptifineInstaller)
-[![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/mzggr0914/OptifineInstaller/blob/master/LICENSE)
+[![Nuget Badge](https://img.shields.io/nuget/v/Optifine.Installer)](https://www.nuget.org/packages/Optifine.Installer)
+[![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/mzggr0914/Optifine.Installer/blob/master/LICENSE)
 
 ## Features
 
@@ -12,7 +12,7 @@ Minecraft OptiFine Installer.
 
 ## Install
 
-Install the [Optifine.Installer Nuget package](https://www.nuget.org/packages/OptifineInstaller)
+Install the [Optifine.Installer Nuget package](https://www.nuget.org/packages/Optifine.Installer)
 
 ## Sample Code With [CmlLib.Core](https://github.com/CmlLib/CmlLib.Core)
 
