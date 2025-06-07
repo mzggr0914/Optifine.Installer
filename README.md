@@ -1,4 +1,4 @@
-# OptifineInstaller
+# Optifine.Installer
 Minecraft OptiFine Installer.
 
 [![Nuget Badge](https://img.shields.io/nuget/v/OptifineInstaller)](https://www.nuget.org/packages/OptifineInstaller)
@@ -12,7 +12,7 @@ Minecraft OptiFine Installer.
 
 ## Install
 
-Install the [OptifineInstaller Nuget package](https://www.nuget.org/packages/OptifineInstaller)
+Install the [Optifine.Installer Nuget package](https://www.nuget.org/packages/OptifineInstaller)
 
 ## Sample Code With [CmlLib.Core](https://github.com/CmlLib/CmlLib.Core)
 
